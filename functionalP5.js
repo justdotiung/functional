@@ -70,3 +70,54 @@ console.log(reduce((a, c) => a + c, [1, 2, 3, 4, 5]));
 console.log(
   reduce((total_price, product) => total_price + product.price, 0, products)
 );
+
+/**
+ * # 코드를 값으로 다루어 표현력 높이기
+ */
+/**
+ * ## go, pipe
+ */
+const add = (a, b) => a + b;
+const go = (...args) => reduce((a, f) => f(a), args);
+const pipe =
+  (f, ...fs) =>
+  (...as) =>
+    go(f(...as), ...fs);
+go(
+  add(0, 1),
+  (a) => a + 10,
+  (a) => a + 100,
+  console.log
+);
+
+const f = pipe(
+  (a, b) => a + b,
+  (a) => a + 10,
+  (a) => a + 100
+);
+
+console.log(f(0, 1));
+
+/**
+ * ### go를 이용한 정의
+ */
+go(
+  products,
+  (products) => filter((p) => p.price < 20000, products),
+  (products) => map((p) => p.price, products),
+  (products) => reduce(add, products),
+  console.log
+);
+
+/**
+ * curry
+ */
+
+const curry =
+  (f) =>
+  (a, ..._) =>
+    _.length ? f(a, ..._) : (..._) => f(a, ..._);
+
+const ad = (a, b, c) => a + b + c;
+const f2 = curry(ad);
+console.log(f2(0)(2, 3));

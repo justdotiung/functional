@@ -3,6 +3,7 @@
  * - 제너레이터: 이터레이터이자 이터러블을 생성하는 함수.
  * - 쉽게 well-formed iterable을 생성한다.
  * - return 은 마지막 done 이 true 가 되면서 반환
+ * - suspended 상태가 되며 이터레이터 상태로 내부를 순회 해야 결과가 나온다.
  */
 function* gen() {
   yield 1;
