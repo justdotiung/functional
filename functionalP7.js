@@ -38,7 +38,7 @@ function take(l, iter) {
   let res = [];
   for (const a of iter) {
     res.push(a);
-    if (l === a) break;
+    if (l === res.length) break;
   }
   return res;
 }

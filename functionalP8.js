@@ -1,3 +1,5 @@
+const { log } = console;
+
 const L = {};
 
 /**
@@ -16,11 +18,12 @@ L.range = function* (l) {
  * ### L.map
  */
 
-L.map = function* (f, iter) {
+L.map = curry(function* (f, iter) {
   for (const a of iter) {
+    console.log(a);
     yield f(a);
   }
-};
+});
 
 const m = L.map((a) => a * 10, [1, 2, 3]);
 // console.log([...m]);
@@ -30,11 +33,11 @@ console.log(m.next());
  * ### L.filter
  */
 
-L.filter = function* (f, iter) {
+L.filter = curry(function* (f, iter) {
   for (const a of iter) {
     if (f(a)) yield a;
   }
-};
+});
 
 const fi = L.filter((a) => a > 2, [1, 2, 3, 4]);
 console.log(fi.next());
@@ -49,3 +52,47 @@ console.log(fi.next());
  * =
  * [[mapping, filtering, mapping], [mapping, filtering, mapping]]
  */
+
+/**
+ * ### reduce
+ */
+
+L.entries = function* (obj) {
+  for (const a in obj) {
+    yield [a, obj[a]];
+  }
+};
+
+const join = curry((sep = ",", iter) => {
+  return reduce((a, b) => `${a}${sep}${b}`, iter);
+});
+
+const queryStr = pipe(
+  L.entries,
+  L.map(([k, v]) => `${k}=${v}`),
+  (a) => (console.log(a), a),
+  join("&"),
+  log
+);
+
+queryStr({ limit: 10, offset: 10, type: "notice" });
+
+/**
+ * ### take, find
+ */
+const users = [
+  { age: 30 },
+  { age: 31 },
+  { age: 32 },
+  { age: 33 },
+  { age: 20 },
+  { age: 21 },
+  { age: 32 },
+  { age: 33 },
+  { age: 20 },
+  { age: 21 },
+];
+
+const find = curry((f, iter) => go(iter, L.filter(f), take(1), ([a]) => a));
+
+log(find((user) => user.age < 30)(users));
