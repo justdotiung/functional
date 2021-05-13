@@ -46,7 +46,7 @@ var n1 = 4;
 // go1(go1(n1, add5), console.log);
 
 var n2 = delay100(4);
-// go1(go1(n2, add5), console.log);
+go1(go1(n2, add5), console.log);
 
 /**
  * ## Composition

@@ -5,21 +5,6 @@ const curry =
   (a, ..._) =>
     _.length ? f(a, ..._) : (..._) => f(a, ..._);
 
-const reduce = curry((f, acc, iter) => {
-  if (!iter) {
-    iter = acc[Symbol.iterator]();
-    acc = iter.next().value;
-  } else {
-    iter = iter[Symbol.iterator]();
-  }
-  let cur;
-  while (!(cur = iter.next()).done) {
-    const a = cur.value;
-    acc = acc instanceof Promise ? acc.then((acc) => f(acc, a)) : f(acc, a);
-  }
-  return acc;
-});
-
 const go = (...args) => reduce((a, f) => f(a), args);
 
 const pipe =
@@ -39,7 +24,7 @@ L.map = curry(function* (f, iter) {
   let cur;
   while (!(cur = iter.next()).done) {
     const a = cur.value;
-    yield f(a);
+    yield go1(a, f);
   }
 });
 
@@ -75,12 +60,42 @@ L.flatMap = pipe(L.map, L.flatten);
 
 const take = curry((l, iter) => {
   let res = [];
-  for (const a of iter) {
-    res.push(a);
-    if (l === res.length) break;
-  }
+  iter = iter[Symbol.iterator]();
+  return (function recur() {
+    let cur;
+    while (!(cur = iter.next()).done) {
+      const a = cur.value;
+      if (a instanceof Promise) {
+        return a.then((a) => {
+          res.push(a);
+          return l === res.length ? res : recur();
+        });
+      }
+      res.push(a);
+      if (l === res.length) break;
+    }
+    return res;
+  })();
+});
 
-  return res;
+const go1 = (a, f) => (a instanceof Promise ? a.then(f) : f(a));
+
+const reduce = curry((f, acc, iter) => {
+  if (!iter) {
+    iter = acc[Symbol.iterator]();
+    acc = iter.next().value;
+  } else {
+    iter = iter[Symbol.iterator]();
+  }
+  return go1(acc, function recur(acc) {
+    let cur;
+    while (!(cur = iter.next()).done) {
+      const a = cur.value;
+      acc = f(acc, a);
+      if (acc instanceof Promise) return acc.then(recur);
+    }
+    return acc;
+  });
 });
 
 const takeAll = take(Infinity);
