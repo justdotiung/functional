@@ -7,6 +7,8 @@ const curry =
 
 const go = (...args) => reduce((a, f) => f(a), args);
 
+const go1 = (a, f) => (a instanceof Promise ? a.then(f) : f(a));
+
 const pipe =
   (f, ...fs) =>
   (...as) =>
@@ -28,12 +30,18 @@ L.map = curry(function* (f, iter) {
   }
 });
 
+const nop = Symbol("nop");
+
 L.filter = curry(function* (f, iter) {
   iter = iter[Symbol.iterator]();
   let cur;
   while (!(cur = iter.next()).done) {
     const a = cur.value;
-    if (f(a)) yield a;
+    const b = go1(a, f);
+
+    if (b instanceof Promise) {
+      yield b.then((b) => (b ? a : Promise.reject(nop)));
+    } else if (b) yield a;
   }
 });
 
@@ -66,10 +74,12 @@ const take = curry((l, iter) => {
     while (!(cur = iter.next()).done) {
       const a = cur.value;
       if (a instanceof Promise) {
-        return a.then((a) => {
-          res.push(a);
-          return l === res.length ? res : recur();
-        });
+        return a
+          .then((a) => {
+            res.push(a);
+            return l === res.length ? res : recur();
+          })
+          .catch((e) => (e === nop ? recur() : Promise.reject(e)));
       }
       res.push(a);
       if (l === res.length) break;
@@ -78,20 +88,24 @@ const take = curry((l, iter) => {
   })();
 });
 
-const go1 = (a, f) => (a instanceof Promise ? a.then(f) : f(a));
+const reduceP = (f, acc, a) =>
+  a instanceof Promise
+    ? a.then(
+        (a) => f(acc, a),
+        (e) => (e == nop ? acc : Promise.reject(e))
+      )
+    : f(acc, a);
+
+const head = (iter) => go1(take(1, iter), ([h]) => h);
 
 const reduce = curry((f, acc, iter) => {
-  if (!iter) {
-    iter = acc[Symbol.iterator]();
-    acc = iter.next().value;
-  } else {
-    iter = iter[Symbol.iterator]();
-  }
+  if (!iter) return reduce(f, head((iter = acc[Symbol.iterator]())), iter);
+
+  iter = iter[Symbol.iterator]();
   return go1(acc, function recur(acc) {
     let cur;
     while (!(cur = iter.next()).done) {
-      const a = cur.value;
-      acc = f(acc, a);
+      acc = reduceP(f, acc, cur.value);
       if (acc instanceof Promise) return acc.then(recur);
     }
     return acc;
