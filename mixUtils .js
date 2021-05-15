@@ -123,3 +123,19 @@ const map = curry(pipe(L.map, takeAll));
 const filter = curry(pipe(L.filter, takeAll));
 
 const flatMap = pipe(L.map, L.flatten, takeAll);
+
+const noop = () => {};
+const noopCatch = ([...arr]) => (
+  arr.forEach((a) => (a instanceof Promise ? a.catch(noop) : a)), arr
+);
+
+const C = {};
+C.reduce = curry((f, acc, iter) =>
+  iter ? reduce(f, acc, noopCatch(iter)) : reduce(f, noopCatch(acc))
+);
+
+C.take = curry((l, iter) => take(l, noopCatch(iter)));
+C.takeAll = C.take(Infinity);
+
+C.map = curry(pipe(L.map, C.takeAll));
+C.filter = curry(pipe(L.filter, C.takeAll));
